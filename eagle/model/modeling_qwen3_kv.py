@@ -41,7 +41,14 @@ from transformers.modeling_outputs import (
 from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS, dynamic_rope_update
 from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
 from transformers.processing_utils import Unpack
-from transformers.utils import LossKwargs, auto_docstring, can_return_tuple, logging
+from transformers.utils import auto_docstring, can_return_tuple, logging
+
+# LossKwargs not available in transformers 4.57.0, defining a placeholder
+# Changed to TypedDict for Python 3.12 compatibility
+from typing import TypedDict
+class LossKwargs(TypedDict, total=False):
+    """Placeholder for LossKwargs compatibility"""
+    pass
 from transformers.models.qwen3.configuration_qwen3 import Qwen3Config
 
 
@@ -616,7 +623,11 @@ class Qwen3Model(Qwen3PreTrainedModel):
         )
 
 
-class KwargsForCausalLM(FlashAttentionKwargs, LossKwargs): ...
+# Python 3.12 fix: Can't inherit from both TypedDict types
+# Just use FlashAttentionKwargs directly or make it a regular class
+class KwargsForCausalLM(FlashAttentionKwargs): 
+    """Combined kwargs for CausalLM - Python 3.12 compatible"""
+    pass
 
 
 @auto_docstring

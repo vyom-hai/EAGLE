@@ -814,21 +814,17 @@ class Model(nn.Module):
         mask_index[draft_parents == 0] = -1
         mask_index = mask_index + 1
         
-        # OPTIMIZATION V2: Vectorized incremental mask construction
-        # This eliminates Python loop and uses PyTorch's vectorized operations
+        # OPTIMIZATION: Incremental mask construction instead of full rebuild
+        # This is O(total_tokens) instead of O(total_tokens²)
         profile_start('tree_mask_incremental')  # [PROFILING]
-        
-        # Filter valid parent-child pairs (where parent >= 0)
-        valid_mask = mask_index >= 0
-        valid_indices = torch.arange(total_tokens, device=mask_index.device)[valid_mask]
-        valid_parents = mask_index[valid_mask]
-        
-        # Vectorized copy: copy all parent rows to child rows at once
-        final_tree_mask[valid_indices + 1] = final_tree_mask[valid_parents].clone()
-        
-        # Vectorized self-attention: set diagonal for all children at once
-        final_tree_mask[valid_indices + 1, valid_indices + 1] = True
-        
+        # Use the pre-allocated final_tree_mask and build it incrementally
+        # For each token, inherit parent's mask and add self-attention
+        for i in range(total_tokens):
+            parent_idx = mask_index[i].item()
+            if parent_idx >= 0:
+                # Copy parent's attention mask to this token
+                final_tree_mask[i + 1] = final_tree_mask[parent_idx].clone()
+                final_tree_mask[i + 1, i + 1] = True  # Self-attention
         tree_mask = final_tree_mask
         profile_end('tree_mask_incremental')  # [PROFILING]
         
